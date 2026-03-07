@@ -1,5 +1,6 @@
+from src.managers.sse_manager import sse_manager
+import asyncio
 from importlib import import_module
-
 from src.configs.app_configs import AppSettings
 from src.schemas.video_schema import TranslateVideoResponse
 from src.services.process_video_by_link_service import ProcessVideoByLinkService
@@ -14,35 +15,67 @@ class ProcessVideoService:
     def __init__(self, settings: AppSettings) -> None:
         self._settings = settings
 
-    def process_video(
-        self, video_url: str, username: str, video_summary: str | None = None
-    ) -> TranslateVideoResponse:
+    # Hàm hỗ trợ lấy instance của service bên dưới để route có thể trích xuất video_id
+    def _get_video_by_link_service(self):
+        return ProcessVideoByLinkService(settings=self._settings)
+
+    async def process_video_by_link(
+        self, video_url: str, username: str, video_summary: str | None, task_id: str
+    ) -> None:
+        print(
+            f"[ProcessVideo] Bắt đầu xử lý video: {video_url} cho user: {username} với task_id: {task_id}"
+        )
+        sse_manager.push_event(
+            task_id,
+            "start",
+            {"message": "Đang bắt đầu xử lý video...", "percent": 1},
+        )
+
         service = ProcessVideoByLinkService(settings=self._settings)
+        loop = asyncio.get_running_loop()
 
         try:
             video_id: str = service.extract_video_id(video_url)
-            print(f"Đã trích xuất thành công Video ID: {video_id}")
-        except ValueError as e:
-            raise ValueError(f"URL YouTube không hợp lệ: {e}") from e
-
-        data: FetchedTranscript | None = service.get_youtube_subtitle(video_id)
-        if not data:
-            raise FileNotFoundError(
-                f"Không tìm thấy phụ đề tiếng Anh cho video: {video_id}"
+            data: FetchedTranscript | None = await asyncio.to_thread(
+                service.get_youtube_subtitle, video_id
+            )
+            sse_manager.push_event(
+                task_id,
+                "progress",
+                {
+                    "message": "Đã trích xuất phụ đề gốc từ YouTube",
+                    "percent": 10,
+                },
             )
 
-        storage = SrtStorageService(settings=self._settings)
-        output_path: str = storage.generate_path(video_id, username)
+            if not data:
+                sse_manager.push_event(
+                    task_id, "error", {"message": f"Không tìm thấy phụ đề: {video_id}"}
+                )
+                return
 
-        service.process_and_save_srt(
-            data,
-            filename=output_path,
-            youtube_video_link=video_url,
-            video_summary=video_summary,
-        )
+            storage = SrtStorageService(settings=self._settings)
+            output_path: str = storage.generate_path(video_id, username)
 
-        return TranslateVideoResponse(
-            video_id=video_id,
-            output_file=output_path,
-            message=f"Hoàn thành! File '{output_path}' đã sẵn sàng.",
-        )
+            await asyncio.to_thread(
+                service.process_and_save_srt,
+                data,
+                output_path,
+                video_url,
+                video_summary,
+                task_id,
+                loop,
+            )
+
+            sse_manager.push_event(
+                task_id,
+                "done",
+                {
+                    "video_id": video_id,
+                    "output_file": output_path,
+                    "message": f"Hoàn thành dịch phụ đề! File '{output_path}' đã sẵn sàng.",
+                    "percent": 100,
+                },
+            )
+        except Exception as e:
+            sse_manager.push_event(task_id, "error", {"message": str(e)})

@@ -1,5 +1,6 @@
+from src.managers.sse_manager import sse_manager
+import asyncio
 import json
-import os
 import re
 import time
 from urllib.parse import parse_qs, urlparse
@@ -7,7 +8,7 @@ from google import genai
 from google.genai import types
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._transcripts import FetchedTranscript
-from src.configs.app_configs import AppSettings, root_dir
+from src.configs.app_configs import AppSettings
 
 
 class ProcessVideoByLinkService:
@@ -19,12 +20,12 @@ class ProcessVideoByLinkService:
     def get_youtube_subtitle(self, video_id: str) -> FetchedTranscript | None:
         """Tải phụ đề tiếng Anh từ YouTube."""
         try:
-            print("Đang tải phụ đề gốc...")
+            print("[ProcessVideo] Đang tải phụ đề gốc...")
             api = YouTubeTranscriptApi()
             transcript = api.fetch(video_id, languages=["en"])
             return transcript
         except Exception as e:
-            print(f"Lỗi khi tải phụ đề: {e}")
+            print(f"[ProcessVideo] Lỗi khi tải phụ đề: {e}")
             return None
 
     def format_time(self, seconds: float) -> str:
@@ -50,7 +51,9 @@ class ProcessVideoByLinkService:
         """
 
         try:
-            print(f"Đang gửi yêu cầu tóm tắt video {youtube_video_link} đến Gemini...")
+            print(
+                f"[ProcessVideo] Đang gửi yêu cầu tóm tắt video {youtube_video_link} đến Gemini..."
+            )
 
             # Gọi API để tạo nội dung tóm tắt
             response = self._client.models.generate_content(
@@ -60,7 +63,7 @@ class ProcessVideoByLinkService:
             # Kiểm tra xem API có trả về văn bản hợp lệ hay không
             summary_text: str | None = response.text
             if summary_text:
-                print("Đã nhận được bản tóm tắt từ Gemini thành công.")
+                print("[ProcessVideo] Đã nhận được bản tóm tắt từ Gemini thành công.")
                 return summary_text
             else:
                 print(
@@ -70,7 +73,9 @@ class ProcessVideoByLinkService:
 
         except Exception as e:
             # Bắt mọi lỗi xảy ra trong quá trình kết nối hoặc xử lý của API
-            print(f"Đã xảy ra lỗi trong quá trình gọi API để tóm tắt video: {e}")
+            print(
+                f"[ProcessVideo] Đã xảy ra lỗi trong quá trình gọi API để tóm tắt video: {e}"
+            )
             return None
 
     def translate_chunk(
@@ -121,7 +126,7 @@ class ProcessVideoByLinkService:
                 return result
             except Exception as e:
                 err_str: str = str(e)
-                print(f"  Lần thử {attempt}/{max_retries} thất bại: {e}")
+                print(f"[ProcessVideo]   Lần thử {attempt}/{max_retries} thất bại: {e}")
 
                 # Nếu model không có free tier (limit: 0), không cần retry thêm
                 if "limit: 0" in err_str:
@@ -136,10 +141,16 @@ class ProcessVideoByLinkService:
                         r"retry[\w\s]*in[\s]+(\d+)", err_str, re.IGNORECASE
                     )
                     wait: int = int(match.group(1)) + 5 if match else 65 * attempt
-                    print(f"  Chờ {wait}s trước khi thử lại...")
+                    print(f"[ProcessVideo]   Chờ {wait}s trước khi thử lại...")
                     time.sleep(wait)
 
         return None
+
+    def _push_event(
+        self, loop: asyncio.AbstractEventLoop, task_id: str, event_type: str, data: dict
+    ) -> None:
+        """Sử dụng loop chính để gọi hàm push_event của Manager một cách an toàn từ luồng phụ."""
+        loop.call_soon_threadsafe(sse_manager.push_event, task_id, event_type, data)
 
     def process_and_save_srt(
         self,
@@ -147,6 +158,8 @@ class ProcessVideoByLinkService:
         filename: str,
         youtube_video_link: str,
         video_summary: str | None = None,
+        task_id: str | None = None,
+        loop: asyncio.AbstractEventLoop | None = None,
     ) -> None:
         """Xử lý chia nhỏ dữ liệu, dịch và lưu thành file SRT."""
         translated_subtitles: list = []
@@ -157,11 +170,32 @@ class ProcessVideoByLinkService:
                 "Đã tải bản tóm tắt phim. Sẽ dùng bản tóm tắt làm ngữ cảnh cho từng cụm."
             )
         else:
-            print("Không có bản tóm tắt phim. Sẽ dịch mà không có ngữ cảnh phim.")
+            print(
+                "[ProcessVideo] Không có bản tóm tắt phim. Sẽ dịch mà không có ngữ cảnh phim."
+            )
 
         total_lines: int = len(original_data)
+        total_chunks: int = (
+            total_lines + self._translate_chunk_size - 1
+        ) // self._translate_chunk_size
         snippets: list = list(original_data)
-        print(f"Tổng cộng có {total_lines} dòng phụ đề. Bắt đầu quá trình dịch...")
+        print(
+            f"[ProcessVideo] Tổng cộng có {total_lines} dòng phụ đề. Bắt đầu quá trình dịch..."
+        )
+
+        # Cập nhật: Sử dụng task_id thay cho progress_queue
+        if task_id and loop:
+            self._push_event(
+                loop,
+                task_id,
+                "progress",
+                {
+                    "message": "Đang bắt đầu dịch phụ đề...",
+                    "total_lines": total_lines,
+                    "total_chunks": total_chunks,
+                    "percent": 20,
+                },
+            )
 
         for i in range(0, total_lines, self._translate_chunk_size):
             chunk: list = snippets[i : i + self._translate_chunk_size]
@@ -176,18 +210,56 @@ class ProcessVideoByLinkService:
             if translated_chunk:
                 translated_subtitles.extend(translated_chunk)
             else:
+                # Tính toán lại số thứ tự đúng của Chunk
+                chunk_index = (i // self._translate_chunk_size) + 1
                 print(
-                    f"Cảnh báo: Chunk {i+1} thất bại sau {3} lần thử. Giữ nguyên tiếng Anh."
+                    f"Cảnh báo: Chunk {chunk_index} thất bại trong quá trình dịch. Giữ nguyên tiếng Anh cho đoạn này."
                 )
                 # Fallback: Nếu AI trả về lỗi, giữ nguyên bản gốc để không làm hỏng file
                 fallback_chunk: list[dict] = [{"text": item.text} for item in chunk]
                 translated_subtitles.extend(fallback_chunk)
 
+            # Cập nhật: Gửi tiến độ qua SSE sử dụng task_id
+            if task_id and loop:
+                chunks_done: int = i // self._translate_chunk_size + 1
+                lines_done: int = min(i + self._translate_chunk_size, total_lines)
+
+                # Tính toán phần trăm: Bắt đầu từ mốc 20%, phần dịch thuật chiếm 70% còn lại
+                current_percent = (
+                    int(20 + (lines_done / total_lines * 70)) if total_lines > 0 else 20
+                )
+
+                self._push_event(
+                    loop,
+                    task_id,
+                    "progress",
+                    {
+                        "message": f"Đã dịch xong {lines_done}/{total_lines} dòng phụ đề.",
+                        "chunk_index": chunks_done,
+                        "total_chunks": total_chunks,
+                        "lines_done": lines_done,
+                        "total_lines": total_lines,
+                        "percent": current_percent,
+                    },
+                )
+
             # Tạm nghỉ 4 giây giữa các lần gọi để đảm bảo an toàn cho gói miễn phí (tránh vượt rate limit)
             time.sleep(4)
 
         # Ghi dữ liệu ra file SRT
-        print("Đang định dạng và lưu file SRT...")
+        if task_id and loop:
+            self._push_event(
+                loop,
+                task_id,
+                "progress",
+                {
+                    "video_id": youtube_video_link,
+                    "output_file": filename,
+                    "message": "Đang định dạng và lưu file SRT...",
+                    "percent": 90,
+                },
+            )
+        print("[ProcessVideo] Đang định dạng và lưu file SRT...")
         with open(filename, "w", encoding="utf-8") as f:
             # Sử dụng hàm zip để ráp thời gian gốc và văn bản đã dịch một cách chính xác
             for index, (orig, trans) in enumerate(
@@ -201,7 +273,7 @@ class ProcessVideoByLinkService:
                     f"{index + 1}\n{start_time} --> {end_time}\n{translated_text}\n\n"
                 )
 
-        print(f"Hoàn thành! File '{filename}' đã sẵn sàng.")
+        print(f"[ProcessVideo] Hoàn thành! File '{filename}' đã sẵn sàng.")
 
     def extract_video_id(self, url: str) -> str:
         """Trích xuất Video ID từ nhiều định dạng đường dẫn YouTube khác nhau."""

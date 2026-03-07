@@ -19,3 +19,7 @@ class TranslateVideoResponse(BaseModel):
 
 class ErrorResponse(BaseModel):
     detail: str
+
+
+class TranslateAcceptedResponse(BaseModel):
+    message: str
