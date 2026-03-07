@@ -42,12 +42,14 @@ async def translate_video(
     """
     Dịch phụ đề video YouTube từ tiếng Anh sang tiếng Việt.
 
+    - **username**: Tên người dùng, dùng để tổ chức thư mục lưu file SRT
     - **video_url**: Đường dẫn YouTube đầy đủ (hỗ trợ `youtu.be` và `youtube.com`)
     - **video_summary**: Tóm tắt nội dung video (tuỳ chọn) để cải thiện chất lượng dịch
     """
     try:
         return service.process_video(
             video_url=request.video_url,
+            username=request.username,
             video_summary=request.video_summary,
         )
     except ValueError as e:

@@ -15,6 +15,7 @@ class AppSettings(BaseSettings):
     gemini_api_key: str
     gemini_model: str
     translate_chunk_size: int
+    translate_results_dir: str = "result"
 
 
 @lru_cache

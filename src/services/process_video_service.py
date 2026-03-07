@@ -1,8 +1,13 @@
-import os
-from src.configs.app_configs import AppSettings, root_dir
+from importlib import import_module
+
+from src.configs.app_configs import AppSettings
 from src.schemas.video_schema import TranslateVideoResponse
 from src.services.process_video_by_link_service import ProcessVideoByLinkService
 from youtube_transcript_api._transcripts import FetchedTranscript
+
+# srt-storage-service.py dùng kebab-case theo quy định dự án, phải import qua importlib
+_srt_storage_module = import_module("src.services.srt-storage-service")
+SrtStorageService = _srt_storage_module.SrtStorageService
 
 
 class ProcessVideoService:
@@ -10,7 +15,7 @@ class ProcessVideoService:
         self._settings = settings
 
     def process_video(
-        self, video_url: str, video_summary: str | None = None
+        self, video_url: str, username: str, video_summary: str | None = None
     ) -> TranslateVideoResponse:
         service = ProcessVideoByLinkService(settings=self._settings)
 
@@ -26,9 +31,8 @@ class ProcessVideoService:
                 f"Không tìm thấy phụ đề tiếng Anh cho video: {video_id}"
             )
 
-        output_dir = os.path.join(root_dir, "result")
-        os.makedirs(output_dir, exist_ok=True)
-        output_path = os.path.join(output_dir, f"vietsub_{video_id}.srt")
+        storage = SrtStorageService(settings=self._settings)
+        output_path: str = storage.generate_path(video_id, username)
 
         service.process_and_save_srt(
             data,
@@ -40,5 +44,5 @@ class ProcessVideoService:
         return TranslateVideoResponse(
             video_id=video_id,
             output_file=output_path,
-            message=f"Hoàn thành! File 'vietsub_{video_id}.srt' đã sẵn sàng.",
+            message=f"Hoàn thành! File '{output_path}' đã sẵn sàng.",
         )
