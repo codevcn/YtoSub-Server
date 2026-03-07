@@ -1,0 +1,28 @@
+Tree view of: D:\D-Documents\TOOLs\subtitle-tool\youtube-subtitle
+
+├── .env
+├── .gitignore
+├── dev.cmd
+├── input
+│   ├── video_config.txt
+│   └── video_summary.md
+├── print_project_tree.py
+├── project_tree.txt
+├── public
+│   └── assets
+│       └── pages
+│           └── upload-video-link
+│               ├── main.css
+│               ├── main.html
+│               └── main.js
+├── result
+│   ├── vietsub_EKgy5EM-Vhw.srt
+│   └── vietsub_h9u5l8ZtHgg.srt
+├── src
+│   ├── gen_sub_file.py
+│   └── main.py
+├── temp
+│   └── runtime.log
+└── warehouse
+    ├── sub_viet - old.srt
+    └── sub_viet.srt
