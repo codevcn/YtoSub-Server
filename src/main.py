@@ -35,11 +35,6 @@ app.include_router(file_router)
 async def http_exception_handler(
     request: Request, exc: StarletteHTTPException
 ) -> JSONResponse:
-    if exc.status_code == 404:
-        return JSONResponse(
-            status_code=404,
-            content={"message": f"Route '{request.url.path}' không tồn tại."},
-        )
     return JSONResponse(
         status_code=exc.status_code, content={"message": str(exc.detail)}
     )
