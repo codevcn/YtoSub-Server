@@ -9,6 +9,7 @@ from google.genai import types
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._transcripts import FetchedTranscript
 from src.configs.app_configs import AppSettings
+from src.services.translate_storage_service import SummaryStorageService
 
 
 class ProcessVideoByLinkService:
@@ -22,7 +23,7 @@ class ProcessVideoByLinkService:
         try:
             print("[ProcessVideo] Đang tải phụ đề gốc...")
             api = YouTubeTranscriptApi()
-            transcript = api.fetch(video_id, languages=["en"])
+            transcript = api.fetch(video_id, languages=["en", "en-US"])
             return transcript
         except Exception as e:
             print(f"[ProcessVideo] Lỗi khi tải phụ đề: {e}")
@@ -40,7 +41,7 @@ class ProcessVideoByLinkService:
     def load_summary(self, youtube_video_link: str) -> str | None:
         """Yêu cầu Gemini tóm tắt phim."""
         prompt = f"""
-        Bạn hãy tóm tắt nội dung của video YouTube tại đường dẫn sau: {youtube_video_link}
+        Bạn hãy tóm tắt nội dung của video YouTube tại đường dẫn sau: "{youtube_video_link}"
         
         Vui lòng trả về kết quả theo đúng định dạng dưới đây:
         - Title:
@@ -160,14 +161,25 @@ class ProcessVideoByLinkService:
         video_summary: str | None = None,
         task_id: str | None = None,
         loop: asyncio.AbstractEventLoop | None = None,
+        summary_storage: SummaryStorageService | None = None,
+        video_id: str | None = None,
+        username: str | None = None,
     ) -> None:
         """Xử lý chia nhỏ dữ liệu, dịch và lưu thành file SRT."""
         translated_subtitles: list = []
 
-        summary: str | None = video_summary or self.load_summary(youtube_video_link)
+        if video_summary:
+            print("[ProcessVideo] Đã nhận được bản tóm tắt phim từ client.")
+            summary: str | None = video_summary
+        else:
+            summary = self.load_summary(youtube_video_link)
+            if summary and summary_storage and video_id and username:
+                summary_storage.save(summary, video_id, username)
+                print(f"[ProcessVideo] Đã lưu file tóm tắt cho video: {video_id}")
+
         if summary:
             print(
-                "Đã tải bản tóm tắt phim. Sẽ dùng bản tóm tắt làm ngữ cảnh cho từng cụm."
+                "[ProcessVideo] Đã tải bản tóm tắt phim. Sẽ dùng bản tóm tắt làm ngữ cảnh cho từng cụm."
             )
         else:
             print(
@@ -200,7 +212,7 @@ class ProcessVideoByLinkService:
         for i in range(0, total_lines, self._translate_chunk_size):
             chunk: list = snippets[i : i + self._translate_chunk_size]
             print(
-                f"Đang xử lý dòng {i + 1} đến {min(i + self._translate_chunk_size, total_lines)}..."
+                f"[ProcessVideo] Đang xử lý dòng {i + 1} đến {min(i + self._translate_chunk_size, total_lines)}..."
             )
 
             # Truyền trực tiếp summary vào hàm dịch
@@ -213,7 +225,7 @@ class ProcessVideoByLinkService:
                 # Tính toán lại số thứ tự đúng của Chunk
                 chunk_index = (i // self._translate_chunk_size) + 1
                 print(
-                    f"Cảnh báo: Chunk {chunk_index} thất bại trong quá trình dịch. Giữ nguyên tiếng Anh cho đoạn này."
+                    f"[ProcessVideo] Cảnh báo: Chunk {chunk_index} thất bại trong quá trình dịch. Giữ nguyên tiếng Anh cho đoạn này."
                 )
                 # Fallback: Nếu AI trả về lỗi, giữ nguyên bản gốc để không làm hỏng file
                 fallback_chunk: list[dict] = [{"text": item.text} for item in chunk]

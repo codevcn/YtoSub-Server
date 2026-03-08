@@ -1,1 +1,1 @@
-call .venv\Scripts\activate.bat && uvicorn src.main:app --reload
+call .venv\Scripts\activate.bat && uvicorn src.main:app --reload --host 0.0.0.0

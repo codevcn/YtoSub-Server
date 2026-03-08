@@ -3,13 +3,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from src.routes.api.video_route import router as video_router
+from src.routes.api.file_route import router as file_router
 import os
+from dotenv import load_dotenv
+
+load_dotenv(dotenv_path=".env")
 
 # Giả sử bạn lấy danh sách origins từ biến môi trường,
 # nếu không có thì mặc định dùng localhost để dev.
-ALLOWED_ORIGINS: list[str] = os.getenv(
-    "ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
-).split(", ")
+ALLOWED_ORIGINS: list[str] = os.getenv("ALLOWED_ORIGINS", "").split(", ")
+print(f"Allowed origins: {ALLOWED_ORIGINS}")
 
 app = FastAPI(
     title="YtoSub Server",
@@ -25,6 +28,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(video_router)
+app.include_router(file_router)
 
 
 @app.exception_handler(StarletteHTTPException)

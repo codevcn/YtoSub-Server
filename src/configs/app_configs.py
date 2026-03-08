@@ -1,6 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import computed_field
 
 root_dir = Path(__file__).resolve().parent.parent.parent
 
@@ -15,7 +16,13 @@ class AppSettings(BaseSettings):
     gemini_api_key: str
     gemini_model: str
     translate_chunk_size: int
-    translate_results_dir: str = "result"
+    translate_results_dir: str = "results"
+
+    @computed_field
+    @property
+    def results_base_dir(self) -> Path:
+        """Thư mục gốc lưu file kết quả: root/results/youtube"""
+        return root_dir / self.translate_results_dir / "youtube"
 
 
 @lru_cache
