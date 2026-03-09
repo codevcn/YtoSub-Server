@@ -4,10 +4,15 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from src.routes.api.video_route import router as video_router
 from src.routes.api.file_route import router as file_router
+from src.routes.api.subtitle_route import router as subtitle_router
+from src.configs.db.database import Base, engine
 import os
 from dotenv import load_dotenv
 
 load_dotenv(dotenv_path=".env")
+
+# Tạo các bảng database nếu chưa tồn tại
+Base.metadata.create_all(bind=engine)
 
 # Giả sử bạn lấy danh sách origins từ biến môi trường,
 # nếu không có thì mặc định dùng localhost để dev.
@@ -29,6 +34,7 @@ app.add_middleware(
 )
 app.include_router(video_router)
 app.include_router(file_router)
+app.include_router(subtitle_router)
 
 
 @app.exception_handler(StarletteHTTPException)
