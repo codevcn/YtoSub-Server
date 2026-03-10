@@ -4,7 +4,7 @@ from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import computed_field
 
-root_dir = Path(__file__).resolve().parent.parent.parent
+root_dir = Path(__file__).parent.parent.parent
 
 
 class AppSettings(BaseSettings):
