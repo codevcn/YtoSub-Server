@@ -1,0 +1,4 @@
+# Đảm bảo các tệp script và env luôn dùng định dạng LF khi lưu vào Git
+*.sh text eol=lf
+*.env text eol=lf
+.env* text eol=lf

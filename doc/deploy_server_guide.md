@@ -11,6 +11,7 @@ Tài liệu này hướng dẫn chi tiết cách triển khai server FastAPI lê
 - **Worker Gunicorn:** 5 (Công thức: $(2 \times 2) + 1 = 5$)
 
 **Cấu trúc thư mục (current/releases model):**
+
 ```
 /var/www/ytosub/
 ├── current -> releases/20260311120000/   # symlink trỏ tới release đang chạy
@@ -35,7 +36,7 @@ Thực hiện dưới quyền `root` hoặc user có quyền `sudo`:
 sudo adduser deploy
 
 # 2. Tạo cấu trúc thư mục current/releases
-sudo mkdir -p /var/www/ytosub/{releases,shared/data}
+sudo mkdir -p /var/www/ytosub/{releases,shared/data,shared/venv,shared/db}
 sudo chown -R deploy:www-data /var/www/ytosub
 sudo chmod -R 775 /var/www/ytosub
 
@@ -215,29 +216,22 @@ echo ">>> Step 1/4: Pull latest code"
 bash "$SCRIPT_DIR/i-pull.sh"
 
 echo ""
-echo ">>> Step 2/4: Run pre-flight tests"
-bash "$SCRIPT_DIR/i-test.sh"
-
-echo ""
-echo ">>> Step 3/4: Build & start server"
+echo ">>> Step 2/4: Build environment & Install dependencies"
 bash "$SCRIPT_DIR/i-build.sh"
 
 echo ""
-echo ">>> Step 4/4: Build & start server"
+echo ">>> Step 3/4: Run pre-flight tests"
+bash "$SCRIPT_DIR/i-test.sh"
+
+echo ""
+echo ">>> Step 4/4: Restart systemd service"
 bash "$SCRIPT_DIR/run-app.sh"
-```
-
-**Cấp quyền chạy cho script:**
-
-```bash
-chmod +x /var/www/ytosub/deploy.sh
-
 ```
 
 ---
 
 ### 🔍 LỆNH KIỂM TRA NHANH
 
-- **Xem log thực tế (SSE):** `tail -f /var/log/ytosub/access.log`
+- **Xem log thực tế (SSE):** `./log.sh`
 - **Kiểm tra lỗi Python:** `journalctl -u ytosub -f`
 - **Kiểm tra socket:** `ls -l /var/www/ytosub/ytosub.sock`
