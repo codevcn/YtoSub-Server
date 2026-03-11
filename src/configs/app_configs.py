@@ -1,6 +1,7 @@
 import os
 from functools import lru_cache
 from pathlib import Path
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import computed_field
 
@@ -9,7 +10,7 @@ root_dir = Path(__file__).parent.parent.parent
 
 class AppSettings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=str(root_dir / ".env"),
+        env_file=[str(root_dir / ".env"), str(root_dir / ".gemini_key.env")],
         env_file_encoding="utf-8",
         extra="ignore",
     )

@@ -8,11 +8,24 @@ from src.routes.api.subtitle_route import router as subtitle_router
 from src.configs.db.database import Base, engine
 import os
 from dotenv import load_dotenv
+from contextlib import asynccontextmanager
 
 load_dotenv(dotenv_path=".env")
+load_dotenv(dotenv_path=".gemini_key.env")
+print(
+    "Environment variables loaded successfully:",
+    os.getenv("GEMINI_API_KEY"),
+)
 
-# Tạo các bảng database nếu chưa tồn tại
-Base.metadata.create_all(bind=engine)
+
+# Quản lý vòng đời của ứng dụng FastAPI
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Khởi tạo các bảng cơ sở dữ liệu khi ứng dụng bắt đầu khởi chạy
+    Base.metadata.create_all(bind=engine)
+    yield
+    # Có thể thêm các tác vụ dọn dẹp khi ứng dụng tắt tại đây
+
 
 # Giả sử bạn lấy danh sách origins từ biến môi trường,
 # nếu không có thì mặc định dùng localhost để dev.
@@ -23,6 +36,7 @@ app = FastAPI(
     title="YtoSub Server",
     description="API dịch phụ đề YouTube từ tiếng Anh sang tiếng Việt bằng Gemini AI.",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
