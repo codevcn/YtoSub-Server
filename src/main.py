@@ -5,6 +5,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from src.routes.api.video_route import router as video_router
 from src.routes.api.file_route import router as file_router
 from src.routes.api.subtitle_route import router as subtitle_router
+from src.routes.api.health_route import router as health_router
 from src.configs.db.database import Base, engine
 import os
 from dotenv import load_dotenv
@@ -46,6 +47,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE"],  # Hạn chế các method cần thiết
     allow_headers=["*"],
 )
+app.include_router(health_router)
 app.include_router(video_router)
 app.include_router(file_router)
 app.include_router(subtitle_router)
