@@ -1,7 +1,7 @@
 import re
 from pathlib import Path
 from fastapi import HTTPException, status
-from src.configs.app_configs import AppSettings, root_dir
+from src.configs.app_configs import AppSettings
 
 # Cho phép: chữ cái, số, dấu gạch dưới, gạch ngang, dấu chấm (dùng cho tên file)
 _SAFE_SEGMENT = re.compile(r"^[a-zA-Z0-9_\-\.]+$")
@@ -60,6 +60,8 @@ class DownloadFileService:
         for video_dir in sorted(user_dir.iterdir()):
             if video_dir.is_dir():
                 for srt_file in sorted(video_dir.glob("*.srt")):
-                    results.append({"video_id": video_dir.name, "filename": srt_file.name})
+                    results.append(
+                        {"video_id": video_dir.name, "filename": srt_file.name}
+                    )
 
         return results

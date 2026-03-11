@@ -1,0 +1,11 @@
+python3 print_project_tree.py
+cat project_tree.txt
+cd /var/www/ytosub/shared
+ls -a
+cd data
+ls -a
+cd ../db
+ls -a
+cd ..
+cat deploy-data.env
+cat .env

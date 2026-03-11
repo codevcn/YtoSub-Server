@@ -3,7 +3,8 @@ from datetime import datetime
 from pathlib import Path
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
-from src.configs.app_configs import AppSettings, root_dir
+from src.configs.app_configs import AppSettings
+from src.configs.roots import root_dir
 from src.configs.db.models import UploadedSubtitles
 from src.configs.db.utils import extract_video_id
 

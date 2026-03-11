@@ -1,11 +1,9 @@
 import os
 from functools import lru_cache
 from pathlib import Path
-from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import computed_field
-
-root_dir = Path(__file__).parent.parent.parent
+from .roots import root_dir
 
 
 class AppSettings(BaseSettings):
@@ -18,36 +16,42 @@ class AppSettings(BaseSettings):
     gemini_api_key: str
     gemini_model: str
     translate_chunk_size: int
-    data_dir: str = os.getenv(
-        "DATA_DIR", "data"
-    )  # Thư mục gốc cho dữ liệu (results, subtitles)
-    db_dir: str = os.getenv("DB_DIR", "db")  # Thư mục gốc cho database (SQLite)
-    translate_results_dir: str = os.getenv(
-        "TRANSLATE_RESULTS_DIR", "results"
-    )  # Thư mục con cho kết quả dịch
-    uploaded_subtitles_dir: str = os.getenv(
-        "UPLOADED_SUBTITLES_DIR", "subtitles"
-    )  # Thư mục con cho phụ đề đã upload
+
+    # Pydantic tự động ánh xạ (map) các biến môi trường dạng IN HOA (DATA_DIR)
+    # vào các thuộc tính viết thường tương ứng ở đây.
+    data_dir: str = "data"
+    db_dir: str = "db"
+    translate_results_dir: str = "results"
+    uploaded_subtitles_dir: str = "subtitles"
 
     @computed_field
     @property
     def results_base_dir(self) -> Path:
-        """Thư mục gốc lưu file kết quả: root/data/results/youtube"""
-        return root_dir / self.data_dir / "youtube" / self.translate_results_dir
+        """Thư mục gốc lưu file kết quả"""
+        base = Path(self.data_dir)
+        # Kiểm tra nếu chưa phải đường dẫn tuyệt đối thì mới nối với root_dir
+        if not base.is_absolute():
+            base = root_dir / base
+        return base / "youtube" / self.translate_results_dir
 
     @computed_field
     @property
     def subtitles_base_dir(self) -> Path:
-        """Thư mục gốc lưu file phụ đề: root/data/subtitles/youtube"""
-        return root_dir / self.data_dir / "youtube" / self.uploaded_subtitles_dir
+        """Thư mục gốc lưu file phụ đề"""
+        base = Path(self.data_dir)
+        if not base.is_absolute():
+            base = root_dir / base
+        return base / "youtube" / self.uploaded_subtitles_dir
 
     @computed_field
     @property
     def database_url(self) -> str:
-        """SQLite URL trỏ đến root/db/subtitles_app.db"""
-        db_folder = root_dir / self.db_dir
-        os.makedirs(db_folder, exist_ok=True)
-        return f"sqlite:///{db_folder / 'subtitles_app.db'}"
+        """SQLite URL"""
+        base = Path(self.db_dir)
+        if not base.is_absolute():
+            base = root_dir / base
+        os.makedirs(base, exist_ok=True)
+        return f"sqlite:///{base / 'subtitles_app.db'}"
 
 
 @lru_cache

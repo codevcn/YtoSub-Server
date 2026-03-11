@@ -1,3 +1,13 @@
+import os
+from dotenv import load_dotenv
+
+load_dotenv(dotenv_path=".env")
+load_dotenv(dotenv_path=".gemini_key.env")
+print(
+    "Environment variables loaded successfully:",
+    os.getenv("GEMINI_API_KEY"),
+)
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -7,16 +17,7 @@ from src.routes.api.file_route import router as file_router
 from src.routes.api.subtitle_route import router as subtitle_router
 from src.routes.api.health_route import router as health_router
 from src.configs.db.database import Base, engine
-import os
-from dotenv import load_dotenv
 from contextlib import asynccontextmanager
-
-load_dotenv(dotenv_path=".env")
-load_dotenv(dotenv_path=".gemini_key.env")
-print(
-    "Environment variables loaded successfully:",
-    os.getenv("GEMINI_API_KEY"),
-)
 
 
 # Quản lý vòng đời của ứng dụng FastAPI
