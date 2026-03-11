@@ -18,18 +18,34 @@ else
     PORT="8000"
 fi
 
-# Cấu hình
-BASE_URL="http://localhost:${PORT}"
 HEALTH_ENDPOINT="/api/v1/health"
+SOCKET_FILE="/var/www/ytosub/ytosub.sock"
 
-echo "Testing endpoint: ${BASE_URL}${HEALTH_ENDPOINT}"
 echo ""
 
-# Thực hiện request và hiển thị kết quả
-curl -X GET "${BASE_URL}${HEALTH_ENDPOINT}" \
-  -H "Content-Type: application/json" \
-  -w "\n\nHTTP Status Code: %{http_code}\n" \
-  -s
+# Kiểm tra xem có file socket không để quyết định cách gọi curl
+if [ -S "$SOCKET_FILE" ]; then
+    echo "Testing endpoint via Unix Socket: $SOCKET_FILE"
+    echo "URL: http://localhost${HEALTH_ENDPOINT}"
+    echo ""
+    
+    # Thực hiện request qua Unix Socket
+    curl -X GET "http://localhost${HEALTH_ENDPOINT}" \
+      --unix-socket "$SOCKET_FILE" \
+      -H "Content-Type: application/json" \
+      -w "\n\nHTTP Status Code: %{http_code}\n" \
+      -s
+else
+    BASE_URL="http://localhost:${PORT}"
+    echo "Testing endpoint via Port: ${BASE_URL}${HEALTH_ENDPOINT}"
+    echo ""
+
+    # Thực hiện request qua Port mạng thông thường
+    curl -X GET "${BASE_URL}${HEALTH_ENDPOINT}" \
+      -H "Content-Type: application/json" \
+      -w "\n\nHTTP Status Code: %{http_code}\n" \
+      -s
+fi
 
 echo ""
 echo "=========================================="

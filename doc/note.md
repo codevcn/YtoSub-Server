@@ -31,7 +31,7 @@ git config --global core.autocrlf false
 - Tham số -f: Viết tắt của "Follow", giúp màn hình tự động cập nhật dòng mới nhất ngay khi nó xuất hiện.
 
 ```bash
-sudo tail -f /var/log/ytosub/error.log
+tail -f /var/log/ytosub/error.log
 ```
 
 2. Xem log của systemd service (System/Process Logs)
@@ -43,5 +43,5 @@ Lệnh này truy cập vào nhật ký của trình quản lý hệ thống (Sys
 - Tham số -u: Chỉ định "Unit" (tên service) cần xem log để tránh bị lẫn với log của các dịch vụ khác trong VPS.
 
 ```bash
-sudo journalctl -u ytosub.service -f
+journalctl -u ytosub.service -f
 ```
