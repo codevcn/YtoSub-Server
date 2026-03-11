@@ -18,20 +18,28 @@ class AppSettings(BaseSettings):
     gemini_api_key: str
     gemini_model: str
     translate_chunk_size: int
-    data_base_dir: str = "data"
-    db_dir: str = "db"
+    data_dir: str = os.getenv(
+        "DATA_DIR", "data"
+    )  # Thư mục gốc cho dữ liệu (results, subtitles)
+    db_dir: str = os.getenv("DB_DIR", "db")  # Thư mục gốc cho database (SQLite)
+    translate_results_dir: str = os.getenv(
+        "TRANSLATE_RESULTS_DIR", "results"
+    )  # Thư mục con cho kết quả dịch
+    uploaded_subtitles_dir: str = os.getenv(
+        "UPLOADED_SUBTITLES_DIR", "subtitles"
+    )  # Thư mục con cho phụ đề đã upload
 
     @computed_field
     @property
     def results_base_dir(self) -> Path:
         """Thư mục gốc lưu file kết quả: root/data/results/youtube"""
-        return root_dir / self.data_base_dir / "youtube" / "results"
+        return root_dir / self.data_dir / "youtube" / self.translate_results_dir
 
     @computed_field
     @property
     def subtitles_base_dir(self) -> Path:
         """Thư mục gốc lưu file phụ đề: root/data/subtitles/youtube"""
-        return root_dir / self.data_base_dir / "youtube" / "subtitles"
+        return root_dir / self.data_dir / "youtube" / self.uploaded_subtitles_dir
 
     @computed_field
     @property

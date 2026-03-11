@@ -8,7 +8,7 @@ Tài liệu này hướng dẫn chi tiết cách triển khai server FastAPI lê
 - **IP:** `34.124.219.246`
 - **Thư mục ứng dụng:** `/var/www/ytosub`
 - **User thực thi:** `deploy`
-- **Worker Gunicorn:** 5 (Công thức: $(2 \times 2) + 1 = 5$)
+- **Worker Gunicorn:** 1 (bắt buộc dùng 1 worker vì `SSEConnectionManager` là in-memory singleton — xem ghi chú bên dưới)
 
 **Cấu trúc thư mục (current/releases model):**
 
@@ -100,7 +100,7 @@ WorkingDirectory=/var/www/ytosub/current
 Environment="PATH=/var/www/ytosub/shared/venv/bin"
 # Timeout 1200s (20 phút) để xử lý các tác vụ AI dài
 ExecStart=/var/www/ytosub/shared/venv/bin/gunicorn \
-    -w 5 \
+    -w 1 \
     -k uvicorn.workers.UvicornWorker \
     --timeout 1200 \
     --keep-alive 5 \
@@ -114,6 +114,11 @@ WantedBy=multi-user.target
 
 ```
 
+> ⚠️ **Tại sao chỉ dùng `-w 1`?**
+> `SSEConnectionManager` lưu `asyncio.Queue` trong RAM của từng process. Khi Gunicorn chạy nhiều worker (ví dụ `-w 5`), mỗi process có bản sao `sse_manager` **độc lập**. Nếu client kết nối SSE vào worker A nhưng request POST `/video/translate` lại được điều phối tới worker B, thì `push_event()` ở worker B sẽ đẩy vào queue trống (không có subscriber) → client không bao giờ nhận được sự kiện.
+>
+> App này chủ yếu **I/O-bound** (gọi Gemini API, fetch YouTube, đọc/ghi file) — một async worker duy nhất xử lý tốt hàng trăm concurrent connection nhờ `asyncio`. Nếu muốn scale multi-process, cần thay thế `SSEConnectionManager` bằng **Redis Pub/Sub**.
+
 ---
 
 ## PHẦN 4: CẤU HÌNH NGINX (REVERSE PROXY & SSE)
@@ -123,7 +128,7 @@ Tạo file: `sudo nano /etc/nginx/sites-available/ytosub.vnote.io.vn`
 **Nội dung file:**
 
 ```nginx
-# Upstream trỏ tới Unix socket của Gunicorn (5 workers)
+# Upstream trỏ tới Unix socket của Gunicorn (1 worker — bắt buộc do SSEConnectionManager dùng in-memory queue)
 upstream ytosub_backend {
     server unix:/var/www/ytosub/ytosub.sock fail_timeout=0;
 }
@@ -235,3 +240,4 @@ bash "$SCRIPT_DIR/run-app.sh"
 - **Xem log thực tế (SSE):** `./log.sh`
 - **Kiểm tra lỗi Python:** `journalctl -u ytosub -f`
 - **Kiểm tra socket:** `ls -l /var/www/ytosub/ytosub.sock`
+- **Xem thêm trong note.md:**
