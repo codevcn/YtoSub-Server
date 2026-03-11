@@ -30,5 +30,4 @@ print(f'  TRANSLATE_CHUNK_SIZE  : {s.translate_chunk_size}')
 print(f'  Env vars: OK')
 "
 
-echo ""
 echo "=== ✅ [i-test] All checks passed. ==="

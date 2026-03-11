@@ -106,7 +106,7 @@ ExecStart=/var/www/ytosub/shared/venv/bin/gunicorn \
     --keep-alive 5 \
     --access-logfile /var/log/ytosub/access.log \
     --error-logfile /var/log/ytosub/error.log \
-    main:app \
+    src.main:app \
     --bind unix:/var/www/ytosub/ytosub.sock
 
 [Install]
