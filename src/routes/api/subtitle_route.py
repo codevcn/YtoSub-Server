@@ -34,9 +34,10 @@ def get_list_subtitles_service(
 
 
 def get_subtitle_service(
+    settings: AppSettings = Depends(get_settings),
     db: Session = Depends(get_db),
 ) -> GetSubtitleService:
-    return GetSubtitleService(db=db)
+    return GetSubtitleService(settings=settings, db=db)
 
 
 @router.post(
