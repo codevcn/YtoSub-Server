@@ -22,14 +22,15 @@ class DownloadFileService:
 
         file_path = (self._base_dir / username / video_id / filename).resolve()
 
-        # Ngăn path traversal: đảm bảo file nằm trong base_dir
-        if not str(file_path).startswith(str(self._base_dir)):
+        # Ngăn path traversal: sử dụng is_relative_to thay vì startswith để đảm bảo an toàn tuyệt đối
+        if not file_path.is_relative_to(self._base_dir):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Truy cập bị từ chối.",
             )
 
-        if not file_path.exists():
+        # Đảm bảo đối tượng cuối cùng thực sự là một tệp tin, không phải là một thư mục
+        if not file_path.is_file():
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"File '{filename}' không tồn tại.",
@@ -38,7 +39,7 @@ class DownloadFileService:
         return file_path
 
     def list_srt_files(self, username: str) -> list[dict]:
-        """Quét thư mục của user và trả về danh sách {video_id, filename} cho tất cả file .srt."""
+        """Quét thư mục của người dùng và trả về danh sách {video_id, filename} cho tất cả file .srt."""
         if not _SAFE_SEGMENT.match(username):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -47,13 +48,15 @@ class DownloadFileService:
 
         user_dir = (self._base_dir / username).resolve()
 
-        if not str(user_dir).startswith(str(self._base_dir)):
+        # Tương tự, sử dụng is_relative_to để kiểm tra tính hợp lệ của đường dẫn
+        if not user_dir.is_relative_to(self._base_dir):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Truy cập bị từ chối.",
             )
 
-        if not user_dir.exists():
+        # Trả về danh sách rỗng nếu thư mục người dùng chưa được tạo
+        if not user_dir.is_dir():
             return []
 
         results: list[dict] = []

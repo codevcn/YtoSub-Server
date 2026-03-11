@@ -38,7 +38,7 @@ class UploadSubtitleService:
         with open(file_path, "wb") as f:
             f.write(file_content)
 
-        relative_path: str = str(file_path.relative_to(root_dir))
+        relative_path: str = str(file_path.relative_to(self._base_dir))
 
         password_hash: str | None = (
             _pwd_context.hash(password) if not is_public and password else None
