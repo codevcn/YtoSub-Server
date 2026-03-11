@@ -1,23 +1,13 @@
 #!/bin/bash
 set -e
 
-source "$(dirname "$0")/deploy-data.env"
+echo "=== [run-app] Restarting YtoSub Server (Systemd) ==="
 
-echo "=== [i-build] Starting YtoSub Server ==="
+# Khởi động lại service bằng quyền sudo. 
+# Lưu ý: User 'deploy' cần được cấp quyền chạy lệnh systemctl restart ytosub mà không cần pass sudo.
+sudo systemctl restart ytosub
 
-# Tạo venv nếu chưa có
-if [ ! -d "$VENV_DIR" ]; then
-    echo ">> No venv found at '$VENV_DIR'. Creating..."
-    python3 -m venv "$VENV_DIR"
-fi
+# Kiểm tra trạng thái service xem có lên xanh (active) không
+sudo systemctl status ytosub --no-pager | grep "Active:"
 
-source "$VENV_DIR/bin/activate"
-
-# Cài dependencies nếu có requirements.txt
-if [ -f "requirements.txt" ]; then
-    echo ">> Installing dependencies..."
-    pip install -r requirements.txt
-fi
-
-echo ">> Starting uvicorn server..."
-uvicorn src.main:app --reload --host $HOST --port $PORT
+echo "=== ✅ [run-app] Server successfully restarted. ==="

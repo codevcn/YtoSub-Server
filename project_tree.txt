@@ -1,28 +1,69 @@
 Tree view of: D:\D-Documents\TOOLs\subtitle-tool\youtube-subtitle
 
 ├── .env
+├── .gemini_key.env
 ├── .gitignore
+├── agents
+│   ├── AGENTS.md
+│   └── agent-skills
+│       └── fastapi_coding_standards.md
+├── data
+│   └── youtube
+│       └── subtitles
+│           └── dQw4w9WgXcQ
+│               └── anonymous_user
+│                   ├── YtoSub_subtitle_dQw4w9WgXcQ_2026-03-10-13.srt
+│                   └── YtoSub_subtitle_dQw4w9WgXcQ_2026-03-10-22.srt
+├── db
+│   └── subtitles_app.db
+├── deploy-data.env
+├── deploy.sh
 ├── dev.cmd
-├── input
-│   ├── video_config.txt
-│   └── video_summary.md
+├── doc
+│   ├── deploy_server_guide.md
+│   └── note.md
+├── i-build.sh
+├── i-pull.sh
+├── i-test.sh
+├── inputs
+├── log.sh
+├── outputs
+│   └── subtitle_content_api_guide.md
 ├── print_project_tree.py
 ├── project_tree.txt
-├── public
-│   └── assets
-│       └── pages
-│           └── upload-video-link
-│               ├── main.css
-│               ├── main.html
-│               └── main.js
-├── result
-│   ├── vietsub_EKgy5EM-Vhw.srt
-│   └── vietsub_h9u5l8ZtHgg.srt
+├── requirements.txt
+├── run-app.sh
 ├── src
-│   ├── gen_sub_file.py
-│   └── main.py
-├── temp
-│   └── runtime.log
+│   ├── configs
+│   │   ├── app_configs.py
+│   │   └── db
+│   │       ├── database.py
+│   │       ├── models.py
+│   │       ├── schemas.py
+│   │       └── utils.py
+│   ├── main.py
+│   ├── managers
+│   │   └── sse_manager.py
+│   ├── routes
+│   │   └── api
+│   │       ├── file_route.py
+│   │       ├── subtitle_route.py
+│   │       └── video_route.py
+│   ├── schemas
+│   │   └── video_schema.py
+│   ├── services
+│   │   ├── download_file_service.py
+│   │   ├── get_subtitle_service.py
+│   │   ├── list_subtitles_service.py
+│   │   ├── process_video_by_link_service.py
+│   │   ├── process_video_service.py
+│   │   ├── translate_storage_service.py
+│   │   └── upload_subtitle_service.py
+│   └── utils
+│       └── constants.py
+├── tasks
+│   └── current-task.json
+├── up-env.cmd
 └── warehouse
-    ├── sub_viet - old.srt
-    └── sub_viet.srt
+    ├── sub_viet copy.srt
+    └── vietsub_TnGl01FkMMo.srt
