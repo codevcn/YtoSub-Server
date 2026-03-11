@@ -32,6 +32,7 @@ class AppSettings(BaseSettings):
         # Kiểm tra nếu chưa phải đường dẫn tuyệt đối thì mới nối với root_dir
         if not base.is_absolute():
             base = root_dir / base
+        print("Absolute results base dir:", base)
         return base / "youtube" / self.translate_results_dir
 
     @computed_field
@@ -41,6 +42,7 @@ class AppSettings(BaseSettings):
         base = Path(self.data_dir)
         if not base.is_absolute():
             base = root_dir / base
+        print("Absolute dir:", base)
         return base / "youtube" / self.uploaded_subtitles_dir
 
     @computed_field
@@ -50,6 +52,7 @@ class AppSettings(BaseSettings):
         base = Path(self.db_dir)
         if not base.is_absolute():
             base = root_dir / base
+        print("Absolute database dir:", base)
         os.makedirs(base, exist_ok=True)
         return f"sqlite:///{base / 'subtitles_app.db'}"
 
