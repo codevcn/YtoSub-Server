@@ -34,7 +34,7 @@ git config --global core.autocrlf false
 tail -f /var/log/ytosub/error.log
 ```
 
-2. Xem log của systemd service (System/Process Logs)
+2. Xem log realtime của server (System/Process Logs)
 
 Lệnh này truy cập vào nhật ký của trình quản lý hệ thống (Systemd). Nó tập trung vào trạng thái sống còn của toàn bộ tiến trình Gunicorn.
 
@@ -44,6 +44,14 @@ Lệnh này truy cập vào nhật ký của trình quản lý hệ thống (Sys
 
 ```bash
 journalctl -u ytosub.service -f
+```
+
+3. Xem log snapshot (Snapshot Logs)
+
+Nếu bạn chỉ muốn xem một "snapshot" tức thời của log mà không cần theo dõi liên tục, có thể dùng lệnh này:
+
+```bash
+journalctl -u ytosub.service -n 100 --no-pager
 ```
 
 ## Lệnh chuyển đổi định dạng xuống dòng từ Windows (CRLF) sang Linux (LF)

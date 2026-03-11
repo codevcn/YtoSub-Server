@@ -115,6 +115,9 @@ async def connect_sse(
                     break
                 try:
                     event: dict = await asyncio.wait_for(queue.get(), timeout=1.0)
+                    print(
+                        f"Đang gửi sự kiện tới client {username} cho video {video_id}: {event['event']}"
+                    )
                     yield {
                         "event": event["event"],
                         "data": json.dumps(event["data"], ensure_ascii=False),
@@ -126,5 +129,6 @@ async def connect_sse(
         finally:
             # Xóa Queue của client này khi họ ngắt kết nối
             sse_manager.unsubscribe(task_id, queue)
+            print(f"Đã ngắt kết nối client {username} cho video {video_id}.")
 
     return EventSourceResponse(event_generator())

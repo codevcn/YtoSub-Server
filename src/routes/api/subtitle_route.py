@@ -15,6 +15,7 @@ from src.schemas.video_schema import ErrorResponse
 from src.services.get_subtitle_service import GetSubtitleService
 from src.services.list_subtitles_service import ListSubtitlesService
 from src.services.upload_subtitle_service import UploadSubtitleService
+from src.utils.constants import PAGE_SIZE
 
 router = APIRouter(prefix="/api/v1", tags=["subtitle"])
 
@@ -142,11 +143,14 @@ async def list_subtitles(
     - **time_to**: Lọc đến thời điểm, ISO 8601 (tuỳ chọn)
     - **page**: Số trang, bắt đầu từ 1 (bắt buộc)
     """
-    result = service.list(body)
+    result: ListSubtitlesResponse = service.list(body)
     if not result.items:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Không tìm thấy file SRT nào cho video_id '{body.video_id}'.",
+        return ListSubtitlesResponse(
+            items=[],
+            total=0,
+            page=body.page,
+            page_size=PAGE_SIZE,
+            video_id=body.video_id,
         )
     return result
 
@@ -161,8 +165,14 @@ async def list_subtitles(
     ),
     responses={
         200: {"description": "Nội dung file SRT (text/plain; charset=utf-8)"},
-        403: {"model": ErrorResponse, "description": "Mật khẩu không khớp hoặc truy cập bị từ chối"},
-        404: {"model": ErrorResponse, "description": "Không tìm thấy bản ghi hoặc file"},
+        403: {
+            "model": ErrorResponse,
+            "description": "Mật khẩu không khớp hoặc truy cập bị từ chối",
+        },
+        404: {
+            "model": ErrorResponse,
+            "description": "Không tìm thấy bản ghi hoặc file",
+        },
     },
 )
 async def get_subtitle_content(
