@@ -1,68 +1,91 @@
-Dưới đây là bản **Checklist chuẩn A-Z** đã được tối ưu hóa riêng cho cấu hình VPS 2 vCPU của bạn, tích hợp luồng xử lý SSE và mức timeout 20 phút cho dự án "YtoSub Server".
+# 🚀 Quy trình Deploy YtoSub Server (FastAPI) trên Ubuntu VPS
+
+Tài liệu này hướng dẫn chi tiết cách triển khai server FastAPI lên VPS 2 vCPU, hỗ trợ SSE (Streaming) và xử lý các tác vụ dài (timeout 20 phút).
+
+## 🛠️ THÔNG SỐ CẤU HÌNH
+
+- **Domain:** `ytosub.vnote.io.vn`
+- **IP:** `34.124.219.246`
+- **Thư mục ứng dụng:** `/var/www/ytosub`
+- **User thực thi:** `deploy`
+- **Worker Gunicorn:** 5 (Công thức: $(2 \times 2) + 1 = 5$)
+
+**Cấu trúc thư mục (current/releases model):**
+```
+/var/www/ytosub/
+├── current -> releases/20260311120000/   # symlink trỏ tới release đang chạy
+├── releases/
+│   ├── 20260311120000/                  # mỗi lần deploy tạo 1 thư mục mới
+│   └── ...
+├── shared/
+│   ├── .env                            # biến môi trường dùng chung
+│   ├── venv/                           # môi trường ảo Python dùng chung
+│   └── data/                           # dữ liệu bền vững (uploads, DB...)
+└── ytosub.sock                         # Unix socket của Gunicorn
+```
 
 ---
 
-## 🏗️ PHẦN 1: CẤU HÌNH TÊN MIỀN (DNS)
+## PHẦN 1: CHUẨN BỊ USER & THƯ MỤC
 
-1. Truy cập quản trị tại **Tenten**.
-2. Thêm bản ghi **A Record**:
+Thực hiện dưới quyền `root` hoặc user có quyền `sudo`:
 
-- **Host:** `ytosub`
-- **Value:** `34.124.219.246`
+```bash
+# 1. Tạo user deploy (nếu chưa có)
+sudo adduser deploy
 
-3. Kiểm tra bằng lệnh `ping ytosub.vnote.io.vn` trên máy cá nhân để chắc chắn IP đã thông.
+# 2. Tạo cấu trúc thư mục current/releases
+sudo mkdir -p /var/www/ytosub/{releases,shared/data}
+sudo chown -R deploy:www-data /var/www/ytosub
+sudo chmod -R 775 /var/www/ytosub
+
+# 3. Tạo thư mục log
+sudo mkdir -p /var/log/ytosub
+sudo chown -R deploy:www-data /var/log/ytosub
+
+```
 
 ---
 
-## 📂 PHẦN 2: CHUẨN BỊ MÔI TRƯỜNG & CODE
+## PHẦN 2: CÀI ĐẶT MÔI TRƯỜNG & CODE
 
-1. **Cập nhật hệ thống:**
-
-```bash
-sudo apt update && sudo apt upgrade -y
-sudo apt install python3-pip python3-venv git -y
-
-```
-
-2. **Tổ chức thư mục (Khuyên dùng /var/www để tránh lỗi quyền hạn Nginx):**
+Chuyển sang user `deploy` để thực hiện:
 
 ```bash
-sudo mkdir -p /var/www/YtoSub-Server
-sudo chown $USER:$USER /var/www/YtoSub-Server
-cd /var/www/YtoSub-Server
+sudo su - deploy
+cd /var/www/ytosub
 
-```
-
-3. **Clone và cài đặt:**
-
-```bash
-git clone https://github.com/codevcn/YtoSub-Server.git .
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+# 1. Thiết lập venv dùng chung trong shared/
+python3 -m venv shared/venv
+source shared/venv/bin/activate
+pip install --upgrade pip
 pip install gunicorn uvicorn
 
-```
+# 2. Tạo file .env dùng chung và dán API Key vào
+nano shared/.env
 
-4. **Thiết lập biến môi trường:** Tạo file `.env` và dán API Key của Google GenAI vào.
+# 3. Clone code vào release đầu tiên
+RELEASE=$(date +%Y%m%d%H%M%S)
+git clone https://github.com/codevcn/YtoSub-Server.git releases/$RELEASE
+
+# 4. Cài đặt dependencies vào shared/venv
+pip install -r releases/$RELEASE/requirements.txt
+
+# 5. Liên kết .env từ shared vào release
+ln -s /var/www/ytosub/shared/.env releases/$RELEASE/.env
+
+# 6. Trỏ symlink current vào release đầu tiên
+ln -sfn /var/www/ytosub/releases/$RELEASE /var/www/ytosub/current
+
+```
 
 ---
 
-## ⚙️ PHẦN 3: CẤU HÌNH GUNICORN (QUẢN LÝ TIẾN TRÌNH)
+## PHẦN 3: CẤU HÌNH GUNICORN (SYSTEMD)
 
-Vì bạn có 2 vCPU và tác vụ là I/O bound (đợi API), chúng ta sẽ dùng công thức:
-$Workers = (2 \times 2) + 1 = 5$
+Quay lại user sudo để tạo file service: `sudo nano /etc/systemd/system/ytosub.service`
 
-1. **Tạo file log:**
-
-```bash
-sudo mkdir -p /var/log/ytosub
-sudo chown $USER:$USER /var/log/ytosub
-
-```
-
-2. **Tạo Systemd Service:** `sudo nano /etc/systemd/system/ytosub.service`
-3. **Dán nội dung (Đã chỉnh timeout 1200s):**
+**Nội dung file:**
 
 ```ini
 [Unit]
@@ -70,11 +93,12 @@ Description=Gunicorn instance to serve YtoSub Server
 After=network.target
 
 [Service]
-User=root
+User=deploy
 Group=www-data
-WorkingDirectory=/var/www/YtoSub-Server
-Environment="PATH=/var/www/YtoSub-Server/venv/bin"
-ExecStart=/var/www/YtoSub-Server/venv/bin/gunicorn \
+WorkingDirectory=/var/www/ytosub/current
+Environment="PATH=/var/www/ytosub/shared/venv/bin"
+# Timeout 1200s (20 phút) để xử lý các tác vụ AI dài
+ExecStart=/var/www/ytosub/shared/venv/bin/gunicorn \
     -w 5 \
     -k uvicorn.workers.UvicornWorker \
     --timeout 1200 \
@@ -82,7 +106,7 @@ ExecStart=/var/www/YtoSub-Server/venv/bin/gunicorn \
     --access-logfile /var/log/ytosub/access.log \
     --error-logfile /var/log/ytosub/error.log \
     main:app \
-    --bind unix:ytosub.sock
+    --bind unix:/var/www/ytosub/ytosub.sock
 
 [Install]
 WantedBy=multi-user.target
@@ -91,39 +115,64 @@ WantedBy=multi-user.target
 
 ---
 
-## 🌐 PHẦN 4: CẤU HÌNH NGINX (REVERSE PROXY & SSE)
+## PHẦN 4: CẤU HÌNH NGINX (REVERSE PROXY & SSE)
 
-1. **Tạo file cấu hình:** `sudo nano /etc/nginx/sites-available/ytosub.vnote.io.vn`
-2. **Dán nội dung (Tắt buffering để SSE chạy mượt):**
+Tạo file: `sudo nano /etc/nginx/sites-available/ytosub.vnote.io.vn`
+
+**Nội dung file:**
 
 ```nginx
+# Upstream trỏ tới Unix socket của Gunicorn (5 workers)
+upstream ytosub_backend {
+    server unix:/var/www/ytosub/ytosub.sock fail_timeout=0;
+}
+
 server {
     listen 80;
     server_name ytosub.vnote.io.vn;
 
-    location / {
+    # Hỗ trợ file upload lớn (subtitle, v.v.)
+    client_max_body_size 100M;
+
+    # --- SSE endpoint: /api/v1/video/sse ---
+    # Cần tắt buffering hoàn toàn để stream sự kiện real-time tới client
+    location /api/v1/video/sse {
         include proxy_params;
-        proxy_pass http://unix:/var/www/YtoSub-Server/ytosub.sock;
+        proxy_pass http://ytosub_backend;
 
-        # Cấu hình Timeout 20 phút
-        proxy_connect_timeout 1200s;
-        proxy_send_timeout 1200s;
-        proxy_read_timeout 1200s;
-
-        # Cấu hình tối ưu cho SSE (Streaming)
         proxy_http_version 1.1;
         proxy_set_header Connection "";
+
+        # Timeout 20 phút — tác vụ dịch AI có thể chạy lâu
+        proxy_read_timeout 1200s;
+        proxy_send_timeout 1200s;
+
+        # Tắt toàn bộ buffering để SSE event được gửi ngay lập tức
         proxy_buffering off;
         proxy_cache off;
         chunked_transfer_encoding on;
         add_header 'X-Accel-Buffering' 'no';
         add_header 'Cache-Control' 'no-cache';
     }
+
+    # --- Tất cả các route còn lại (/api/v1/video/translate, /file, /subtitle, ...) ---
+    location / {
+        include proxy_params;
+        proxy_pass http://ytosub_backend;
+
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+
+        # Timeout 20 phút cho tác vụ dịch chạy nền (POST /video/translate)
+        proxy_connect_timeout 1200s;
+        proxy_send_timeout 1200s;
+        proxy_read_timeout 1200s;
+    }
 }
 
 ```
 
-3. **Kích hoạt:**
+**Kích hoạt cấu hình:**
 
 ```bash
 sudo ln -s /etc/nginx/sites-available/ytosub.vnote.io.vn /etc/nginx/sites-enabled
@@ -134,18 +183,13 @@ sudo systemctl restart nginx
 
 ---
 
-## 🔒 PHẦN 5: SSL & KHỞI CHẠY
-
-1. **Cấp SSL:**
+## PHẦN 5: SSL & KHỞI CHẠY HỆ THỐNG
 
 ```bash
+# Cấp chứng chỉ SSL miễn phí
 sudo certbot --nginx -d ytosub.vnote.io.vn
 
-```
-
-2. **Chạy Service FastAPI:**
-
-```bash
+# Khởi chạy dịch vụ FastAPI
 sudo systemctl daemon-reload
 sudo systemctl start ytosub
 sudo systemctl enable ytosub
@@ -154,17 +198,46 @@ sudo systemctl enable ytosub
 
 ---
 
-## 🛠️ PHẦN 6: KIỂM TRA & DUY TRÌ
+## PHẦN 6: DUY TRÌ & CẬP NHẬT (DEPLOY.SH)
 
-- **Xem tiến độ stream (Log):** `tail -f /var/log/ytosub/access.log`
-- **Kiểm tra lỗi nếu có:** `journalctl -u ytosub -f`
-- **Cập nhật code nhanh:** Tạo một file `deploy.sh` với nội dung:
+Tạo file `deploy.sh` tại `/var/www/ytosub/deploy.sh` (Sở hữu bởi user `deploy`):
 
 ```bash
-git pull
-source venv/bin/activate
-pip install -r requirements.txt
-sudo systemctl restart ytosub
-echo "YtoSub Server updated!"
+#!/bin/bash
+set -e
+
+SCRIPT_DIR="$(dirname "$0")"
+
+echo "=== [deploy] Starting full deploy sequence ==="
+
+echo ""
+echo ">>> Step 1/4: Pull latest code"
+bash "$SCRIPT_DIR/i-pull.sh"
+
+echo ""
+echo ">>> Step 2/4: Run pre-flight tests"
+bash "$SCRIPT_DIR/i-test.sh"
+
+echo ""
+echo ">>> Step 3/4: Build & start server"
+bash "$SCRIPT_DIR/i-build.sh"
+
+echo ""
+echo ">>> Step 4/4: Build & start server"
+bash "$SCRIPT_DIR/run-app.sh"
+```
+
+**Cấp quyền chạy cho script:**
+
+```bash
+chmod +x /var/www/ytosub/deploy.sh
 
 ```
+
+---
+
+### 🔍 LỆNH KIỂM TRA NHANH
+
+- **Xem log thực tế (SSE):** `tail -f /var/log/ytosub/access.log`
+- **Kiểm tra lỗi Python:** `journalctl -u ytosub -f`
+- **Kiểm tra socket:** `ls -l /var/www/ytosub/ytosub.sock`

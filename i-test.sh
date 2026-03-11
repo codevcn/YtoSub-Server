@@ -34,4 +34,4 @@ print('  Env vars: OK')
 "
 
 echo ""
-echo "=== [i-test] All checks passed. Safe to run i-build.sh ==="
+echo "=== ✅ [i-test] All checks passed. Safe to run i-build.sh ==="

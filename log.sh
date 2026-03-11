@@ -1,0 +1,1 @@
+tail -n 50 /var/log/ytosub/access.log

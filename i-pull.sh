@@ -10,4 +10,4 @@ echo ">> Resetting local changes..."
 git fetch origin
 git reset --hard origin/$GIT_BRANCH
 
-echo "=== [i-pull] Done. Working tree is clean and up-to-date. ==="
+echo "=== ✅ [i-pull] Done. Working tree is clean and up-to-date. ==="
