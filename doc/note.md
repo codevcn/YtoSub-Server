@@ -45,3 +45,12 @@ Lệnh này truy cập vào nhật ký của trình quản lý hệ thống (Sys
 ```bash
 journalctl -u ytosub.service -f
 ```
+
+## Lệnh chuyển đổi định dạng xuống dòng từ Windows (CRLF) sang Linux (LF)
+
+```bash
+cd /var/www/ytosub/shared
+sed -i 's/\r$//' *.env
+cd /var/www/ytosub/current
+sed -i 's/\r$//' *.sh
+```

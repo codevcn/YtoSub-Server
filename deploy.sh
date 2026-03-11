@@ -1,9 +1,15 @@
 #!/bin/bash
 set -e
 
-SCRIPT_DIR="$(dirname "$0")"
-
 echo "=== [deploy] Starting full deploy sequence ==="
+
+# Xử lý vấn đề file có định dạng Windows (CRLF) gây lỗi khi chạy trên Linux.
+cd /var/www/ytosub/shared
+sed -i 's/\r$//' *.env
+cd /var/www/ytosub/current
+sed -i 's/\r$//' *.sh
+
+SCRIPT_DIR="$(dirname "$0")"
 
 echo ""
 echo ">>> Step 1/4: Pull latest code"

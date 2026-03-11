@@ -1,1 +1,1 @@
-tail -n 50 /var/log/ytosub/access.log
+journalctl -u ytosub.service -n 100 --no-pager
