@@ -5,9 +5,7 @@ source "$(dirname "$0")/deploy-data.env"
 
 echo "=== [i-build] Preparing Virtual Environment & Dependencies ==="
 
-# Đảm bảo dùng chung venv từ thư mục shared để không phải cài lại từ đầu
-VENV_DIR="/var/www/ytosub/shared/venv"
-
+# Kiểm tra và tạo môi trường ảo dựa trên biến VENV_DIR
 if [ ! -d "$VENV_DIR" ]; then
     echo ">> No shared venv found at '$VENV_DIR'. Creating..."
     python3 -m venv "$VENV_DIR"

@@ -2,7 +2,6 @@
 set -e
 
 source "$(dirname "$0")/deploy-data.env"
-VENV_DIR="/var/www/ytosub/shared/venv"
 
 echo "=== [i-test] Running pre-flight tests ==="
 
@@ -15,7 +14,8 @@ source "$VENV_DIR/bin/activate"
 
 echo ""
 echo "[1/2] Checking imports..."
-python -c "
+# Khai báo PYTHONPATH để đảm bảo việc import từ src hoạt động đúng
+PYTHONPATH="/var/www/ytosub/current" python -c "
 from src.main import app
 print('  app import: OK')
 "
@@ -27,7 +27,7 @@ from src.configs.app_configs import get_settings
 s = get_settings()
 print(f'  GEMINI_MODEL          : {s.gemini_model}')
 print(f'  TRANSLATE_CHUNK_SIZE  : {s.translate_chunk_size}')
-print(f'  Env vars: OK')
+print('  Env vars: OK')
 "
 
 echo "=== ✅ [i-test] All checks passed. ==="
