@@ -8,8 +8,9 @@ git update-index --add --chmod=+x i-test.sh
 git update-index --add --chmod=+x log.sh
 git update-index --add --chmod=+x run-app.sh
 git update-index --add --chmod=+x curl-test.sh
+git update-index --add --chmod=+x tree.sh
 
-git update-index --add --chmod=+x deploy.sh && git update-index --add --chmod=+x i-pull.sh && git update-index --add --chmod=+x i-build.sh && git update-index --add --chmod=+x i-test.sh && git update-index --add --chmod=+x log.sh && git update-index --add --chmod=+x run-app.sh && git update-index --add --chmod=+x curl-test.sh
+git update-index --add --chmod=+x deploy.sh && git update-index --add --chmod=+x i-pull.sh && git update-index --add --chmod=+x i-build.sh && git update-index --add --chmod=+x i-test.sh && git update-index --add --chmod=+x log.sh && git update-index --add --chmod=+x run-app.sh && git update-index --add --chmod=+x curl-test.sh && git update-index --add --chmod=+x tree.sh
 ```
 
 ## Chạy lệnh để đổi từ CRLF sang LF
