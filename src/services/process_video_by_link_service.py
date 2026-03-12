@@ -214,6 +214,15 @@ class ProcessVideoByLinkService:
             print(
                 f"[ProcessVideo] Đang xử lý dòng {i + 1} đến {min(i + self._translate_chunk_size, total_lines)}..."
             )
+            if task_id and loop:
+                self._push_event(
+                    loop,
+                    task_id,
+                    "message",
+                    {
+                        "message": f"Đang dịch dòng {i + 1} đến {min(i + self._translate_chunk_size, total_lines)}...",
+                    },
+                )
 
             # Truyền trực tiếp summary vào hàm dịch
             translated_chunk = self.translate_chunk(chunk, summary)
